@@ -8,7 +8,6 @@ const getAllStations = async (req, res) => {
         const stations = db.query(
             'SELECT DISTINCT `code`, `name`, `ID` FROM stations Order By `name` ASC')
         res.status(200).json({message: "Successfully Retrieved Stations.", data: stations})
-        res.send(stations)
     } catch (e) {
         res.status(500).json({message: "Unexpected Error", data: []})
     }
