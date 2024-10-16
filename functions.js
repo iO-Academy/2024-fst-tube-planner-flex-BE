@@ -16,91 +16,86 @@ const getJourneys = async (req, res) => {
         const {origin: originSelection, destination: destinationSelection} = req.query
         if (!originSelection || !destinationSelection) {
             res.status(400).json({message: "Origin and Destination are required."})
-        }
+        } else {
+            // Unique Stations on Dropdown requires selection of all instances of Origins and Destinations...
+            const origins = await getStationInstances(originSelection)
+            const destinations = await getStationInstances(destinationSelection)
+            console.log(origins)
+            // Extract Lines to See if Single Line is Possible
+            const originLines = origins.map(station => station.line)
+            const destinationLines = destinations.map(station => station.line)
 
-        // Unique Stations on Dropdown requires selection of all instances of Origins and Destinations...
-        const origins = await getOriginStations(originSelection)
-        const destinations = await getDestinationStations(destinationSelection)
+            // Create Pairs of Origins and Destinations. Stations Exist across multiple Lines.
+            const pairs = originLines.reduce((accumulator, line, originIndex) => {
+                const destinationIndex = destinationLines.indexOf(line)
+                if (destinationIndex !== -1) {
+                    accumulator.push([originIndex, destinationIndex])
+                }
+                return accumulator
+            }, [])
 
-        // Extract Lines to See if Single Line is Possible
-        const originLines = origins.map(station => station.line)
-        const destinationLines = destinations.map(station => station.line)
+            // Create Routes populated with Origin and Destination station Details
+            let routes = pairs.map(([originIndex, destinationIndex]) => {
+                const originStation = origins[originIndex];
+                const destinationStation = destinations[destinationIndex];
 
-        // Create Pairs of Origins and Destinations. Stations Exist across multiple Lines.
-        const pairs = originLines.reduce((accumulator, line, originIndex) => {
-            const destinationIndex = destinationLines.indexOf(line)
-            if (destinationIndex !== -1) {
-                accumulator.push([originIndex, destinationIndex])
+                return {
+                    line: originStation.line,
+                    start: Math.min(originStation.position, destinationStation.position),
+                    end: Math.max(originStation.position, destinationStation.position)
+                }
+            })
+
+            //Query Journey Data
+            const journeys = []
+            for (const route of routes) {
+                let journey = await getSingleLineJourney(route.line, route.start, route.end);
+                journeys.push(journey);
             }
-            return accumulator
-        }, [])
 
-        // Create Routes populated with Origin and Destination station Details
-        let routes = pairs.map(([originIndex, destinationIndex]) => {
-            const originStation = origins[originIndex];
-            const destinationStation = destinations[destinationIndex];
+            //Summarise data to provide information in the format of end Route Card
+            const journeySummaries = []
 
-            return {
-                line: originStation.line,
-                start: Math.min(originStation.position, destinationStation.position),
-                end: Math.max(originStation.position, destinationStation.position)
+            for (const journey of journeys) {
+
+                let journeyArrayLength = journey.length - 1
+
+                if (journey[0].code === originSelection) {
+                    const from = journey[0].name
+                    const to = journey[journeyArrayLength].name
+                    const line = journey[0].line
+                    const stationBreakdown = journey.map(station => station.name)
+                    journeySummaries.push({
+                        from: from, to: to, line: line, stations: stationBreakdown
+                    })
+                } else {
+                    const from = journey[journeyArrayLength].name
+                    const to = journey[0].name
+                    const line = journey[journeyArrayLength].line
+                    const stationBreakdown = journey.map(station => station.name).reverse()
+                    journeySummaries.push({
+                        from: from, to: to, line: line, stations: stationBreakdown
+                    })
+                }
             }
-        })
 
-        //Query Journey Data
-        const journeys = []
-        for (const route of routes) {
-            let journey = await getSingleLineJourney(route.line, route.start, route.end);
-            journeys.push(journey);
-        }
-
-        //Summarise data to provide information in the format of end Route Card
-        const journeySummaries = []
-
-        for (const journey of journeys) {
-
-            let journeyArrayLength = journey.length - 1
-
-            if (journey[0].code === originSelection) {
-                const from = journey[0].name
-                const to = journey[journeyArrayLength].name
-                const line = journey[0].line
-                const stationBreakdown = journey.map(station => station.name)
-                journeySummaries.push({
-                    from: from, to: to, line: line, Stations: stationBreakdown
+            // Render Data back to the request
+            if (journeys.length > 0) {
+                res.status(200).json({
+                    message: "Successfully Retrieved Journeys.", data: journeys, summary: journeySummaries
                 })
             } else {
-                const from = journey[journeyArrayLength].name
-                const to = journey[0].name
-                const line = journey[journeyArrayLength].line
-                const stationBreakdown = journey.map(station => station.name).reverse()
-                journeySummaries.push({
-                    from: from, to: to, Line: line, Stations: stationBreakdown
-                })
+                res.status(204).json({message: "No Valid Journeys", data: []})
             }
-        }
-
-        // Render Data back to the request
-        if (journeys.length > 0) {
-            res.status(200).json({
-                message: "Successfully Retrieved Journeys.", data: journeys, summary: journeySummaries
-            })
-        } else {
-            res.status(204).json({message: "No Valid Journeys", data: []})
         }
     } catch (e) {
         res.status(500).json({message: "Unexpected Error", data: []})
     }
 }
 
-const getOriginStations = async (originCode) => {
+const getStationInstances = async (stationCode) => {
     const db = await dbConnection
-    return db.query('SELECT `id`, `code`, `name`, `timeToPrev`, `timeToNext`, `zone`, `line`, `position` FROM `stations` WHERE `code` = ?', [originCode])
-}
-
-const getDestinationStations = async (destinationCode) => {
-    const db = await dbConnection
-    return db.query('SELECT `id`, `code`, `name`, `timeToPrev`, `timeToNext`, `zone`, `line`, `position` FROM `stations` WHERE `code` = ?', [destinationCode])
+    return db.query('SELECT `id`, `code`, `name`, `timeToPrev`, `timeToNext`, `zone`, `line`, `position` FROM `stations` WHERE `code` = ?', [stationCode])
 }
 
 const getSingleLineJourney = async (line, start, end) => {
@@ -108,4 +103,8 @@ const getSingleLineJourney = async (line, start, end) => {
     return db.query('SELECT `id`, `code`, `name`, `timeToPrev`, `timeToNext`, `zone`, `line`, `position` FROM `stations` WHERE `line` = ? AND `position` >= ? AND `position` <= ?', [line, start, end])
 }
 
-module.exports = {getAllStations, getJourneys}
+console.log(getStationInstances('KXX'))
+
+console.log(getSingleLineJourney('Hammersmith_and_Circle', 11, 18))
+
+module.exports = {getAllStations, getJourneys, getStationInstances, getSingleLineJourney}
