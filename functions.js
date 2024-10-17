@@ -20,7 +20,7 @@ const getJourneys = async (req, res) => {
             // Unique Stations on Dropdown requires selection of all instances of Origins and Destinations...
             const origins = await getStationInstances(originSelection)
             const destinations = await getStationInstances(destinationSelection)
-            console.log(origins)
+
             // Extract Lines to See if Single Line is Possible
             const originLines = origins.map(station => station.line)
             const destinationLines = destinations.map(station => station.line)
@@ -79,7 +79,7 @@ const getJourneys = async (req, res) => {
                 }
             }
 
-            // Render Data back to the request
+            // Provide response back to the request
             if (journeys.length > 0) {
                 res.status(200).json({
                     message: "Successfully Retrieved Journeys.", data: journeys, summary: journeySummaries
@@ -102,9 +102,5 @@ const getSingleLineJourney = async (line, start, end) => {
     const db = await dbConnection
     return db.query('SELECT `id`, `code`, `name`, `timeToPrev`, `timeToNext`, `zone`, `line`, `position` FROM `stations` WHERE `line` = ? AND `position` >= ? AND `position` <= ?', [line, start, end])
 }
-
-console.log(getStationInstances('KXX'))
-
-console.log(getSingleLineJourney('Hammersmith_and_Circle', 11, 18))
 
 module.exports = {getAllStations, getJourneys, getStationInstances, getSingleLineJourney}
