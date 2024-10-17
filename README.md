@@ -94,7 +94,6 @@ N/A
 ```
   {
     message: "Successfully Retrieved Journeys.",
-    data: journeys,
     summary: journeySummaries
   }
 ```
@@ -102,30 +101,6 @@ N/A
 - Example Data:
 
 ```
-  "data": [
-        [
-            {
-                "id": 2000,
-                "code": "ACT",
-                "name": "Acton Town",
-                "timeToPrev": null,
-                "timeToNext": 143,
-                "zone": 5,
-                "line": "District",
-                "position": 0
-            },
-            {
-                "id": 2001,
-                "code": "ALE",
-                "name": "Aldgate East",
-                "timeToPrev": 143,
-                "timeToNext": 180,
-                "zone": 1,
-                "line": "District",
-                "position": 1
-            }
-        ]
-    ],
     "summary": [
         {
             "from": "Acton Town",
