@@ -12,18 +12,15 @@ const getAllStations = async (req, res) => {
 
 const calculateCosts = (originZone, destinationZone) => {
 
-    let cost = 0
+    let cost = 3.99
 
-    if(originZone === destinationZone) {
-        cost += 3.99
-    }
-    else if (originZone > destinationZone)
+    if (originZone > destinationZone)
     {
-        cost += 3.99 + ((originZone - destinationZone) * 0.70)
+        cost += (originZone - destinationZone) * 0.70
     }
     else if(originZone < destinationZone)
     {
-        cost += 3.99 + ((destinationZone - originZone) * 0.35)
+        cost += (destinationZone - originZone) * 0.35
     }
     return cost
 }
@@ -100,7 +97,7 @@ const getJourneys = async (req, res) => {
                 return {
                     line: originStation.line,
                     start: Math.min(originStation.position, destinationStation.position),
-                    end: Math.max(originStation.position, destinationStation.position),
+                    end: Math.max(originStation.position, destinationStation.position)
                 }
             })
 
