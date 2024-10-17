@@ -10,6 +10,21 @@ const getAllStations = async (req, res) => {
     }
 }
 
+const calculateCosts = (originZone, destinationZone) => {
+
+    let cost = 3.99
+
+    if (originZone > destinationZone)
+    {
+        cost += (originZone - destinationZone) * 0.70
+    }
+    else if(originZone < destinationZone)
+    {
+        cost += (destinationZone - originZone) * 0.35
+    }
+    return cost
+}
+
 const getStationInstances = async (stationCode) => {
     const db = await dbConnection
     return db.query('SELECT `id`, `code`, `name`, `timeToPrev`, `timeToNext`, `zone`, `line`, `position` FROM `stations` WHERE `code` = ?', [stationCode])
@@ -32,26 +47,27 @@ const generateJourneySummaries = (journeys, originCode) => {
             const from = firstStation.name
             const to = lastStation.name
             const line = firstStation.line
-
-            const time = journey.reduce((accumulator , station) => accumulator + station.timeToNext,0)
+            const cost = calculateCosts(firstStation.zone, lastStation.zone)
+            const time = journey.reduce((accumulator , station) => accumulator + station.timeToNext,0) - lastStation.timeToNext
             const stationBreakdown = journey.map(station => [station.name, station.timeToNext])
             summaries.push({
-                from: from, to: to, line: line, time: time, stations: stationBreakdown
+                from: from, to: to, line: line, time: time, cost: cost, stations: stationBreakdown
             })
         } else {
             const from = lastStation.name
             const to = firstStation.name
             const line = lastStation.line
-            const time = journey.reduce((accumulator , station) => accumulator + station.timeToPrev,0)
+            const cost = calculateCosts(lastStation.zone, firstStation.zone)
+            const time = journey.reduce((accumulator , station) => accumulator + station.timeToPrev,0) - firstStation.timeToPrev
+
             const stationBreakdown = journey.map(station => [station.name, station.timeToPrev]).reverse()
             summaries.push({
-                from: from, to: to, line: line, time: time, stations: stationBreakdown
+                from: from, to: to, line: line, time: time, cost: cost, stations: stationBreakdown
             })
         }
     }
     return summaries
 }
-
 
 const getJourneys = async (req, res) => {
     try {
