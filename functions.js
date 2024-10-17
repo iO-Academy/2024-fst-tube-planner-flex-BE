@@ -10,6 +10,25 @@ const getAllStations = async (req, res) => {
     }
 }
 
+const calculateCosts = (originZone, destinationZone) => {
+
+    let cost = 0
+
+    if(originZone === destinationZone) {
+        cost += 3.99
+    }
+    else if (originZone > destinationZone)
+    {
+        cost += 3.99 + ((originZone - destinationZone) * 0.70)
+    }
+    else if(originZone < destinationZone)
+    {
+        cost += 3.99 + ((destinationZone - originZone) * 0.35)
+    }
+    return cost
+}
+
+
 const getJourneys = async (req, res) => {
     try {
         // Get Query Params & Check they're populated. Throw Bad Request.
@@ -42,7 +61,9 @@ const getJourneys = async (req, res) => {
                 return {
                     line: originStation.line,
                     start: Math.min(originStation.position, destinationStation.position),
-                    end: Math.max(originStation.position, destinationStation.position)
+                    end: Math.max(originStation.position, destinationStation.position),
+                    originZone: originStation.zone,
+                    destinationZone: destinationStation.zone
                 }
             })
 
@@ -50,13 +71,17 @@ const getJourneys = async (req, res) => {
             const journeys = []
             for (const route of routes) {
                 let journey = await getSingleLineJourney(route.line, route.start, route.end);
-                journeys.push(journey);
+                let test = calculateCosts(route.originZone, route.destinationZone)
+                let newTest = {cost: test}
+                journeys.push(journey, newTest);
             }
 
+            // console.log(journeys)
             //Summarise data to provide information in the format of end Route Card
             const journeySummaries = []
 
             for (const journey of journeys) {
+
 
                 let journeyArrayLength = journey.length - 1
 
