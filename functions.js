@@ -64,17 +64,19 @@ const getJourneys = async (req, res) => {
                     const from = journey[0].name
                     const to = journey[journeyArrayLength].name
                     const line = journey[0].line
-                    const stationBreakdown = journey.map(station => station.name)
+                    const time = journey.map(station => station.timeToNext).reduce((accumulator, currentValue) => accumulator + currentValue)
+                    const stationBreakdown = journey.map(station => [station.name, station.timeToNext])
                     journeySummaries.push({
-                        from: from, to: to, line: line, stations: stationBreakdown
+                        from: from, to: to, line: line, time: time, stations: stationBreakdown
                     })
                 } else {
                     const from = journey[journeyArrayLength].name
                     const to = journey[0].name
                     const line = journey[journeyArrayLength].line
-                    const stationBreakdown = journey.map(station => station.name).reverse()
+                    const time = journey.map(station => station.timeToPrevious).reduce((accumulator, currentValue) => accumulator + currentValue)
+                    const stationBreakdown = journey.map(station => [station.name, station.timeToPrev]).reverse()
                     journeySummaries.push({
-                        from: from, to: to, line: line, stations: stationBreakdown
+                        from: from, to: to, line: line, time: time, stations: stationBreakdown
                     })
                 }
             }
