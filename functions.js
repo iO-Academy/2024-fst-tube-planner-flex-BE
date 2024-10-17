@@ -66,7 +66,6 @@ const generateJourneySummaries = (journeys, originCode) => {
             })
         }
     }
-    // console.log(summaries)
     return summaries
 }
 const getJourneys = async (req, res) => {
@@ -112,7 +111,6 @@ const getJourneys = async (req, res) => {
                 journeys.push(journey);
             }
 
-            // console.log(journeys)
             //Summarise data to provide information in the format of end Route Card
             let journeySummaries = generateJourneySummaries(journeys, originSelection)
 
