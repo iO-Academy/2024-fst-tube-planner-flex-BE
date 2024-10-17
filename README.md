@@ -74,6 +74,19 @@ GET
 
 N/A
 
+
+
+- Query Params:
+
+``` 
+  '/journeys?origin=ACT&destination=ALE'
+  
+```
+  origin=[*ACT*]
+
+  destination=[*ALE*]
+
+
 - Success Response:
 - Code: 200
 - Response:
