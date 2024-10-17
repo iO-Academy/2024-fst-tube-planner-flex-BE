@@ -10,6 +10,45 @@ const getAllStations = async (req, res) => {
     }
 }
 
+const getStationInstances = async (stationCode) => {
+    const db = await dbConnection
+    return db.query('SELECT `id`, `code`, `name`, `timeToPrev`, `timeToNext`, `zone`, `line`, `position` FROM `stations` WHERE `code` = ?', [stationCode])
+}
+
+const getSingleLineJourney = async (line, start, end) => {
+    const db = await dbConnection
+    return db.query('SELECT `id`, `code`, `name`, `timeToPrev`, `timeToNext`, `zone`, `line`, `position` FROM `stations` WHERE `line` = ? AND `position` >= ? AND `position` <= ?', [line, start, end])
+}
+
+const generateJourneySummaries = (journeys, originCode) => {
+    let summaries = []
+
+    for (const journey of journeys) {
+
+        let firstStation = journey[0]
+        let lastStation = journey[journey.length - 1]
+
+        if (journey[0].code === originCode) {
+            const from = firstStation.name
+            const to = lastStation.name
+            const line = firstStation.line
+            const stationBreakdown = journey.map(station => station.name)
+            summaries.push({
+                from: from, to: to, line: line, stations: stationBreakdown
+            })
+        } else {
+            const from = lastStation.name
+            const to = firstStation.name
+            const line = lastStation.line
+            const stationBreakdown = journey.map(station => station.name).reverse()
+            summaries.push({
+                from: from, to: to, line: line, stations: stationBreakdown
+            })
+        }
+    }
+    return summaries
+}
+
 const getJourneys = async (req, res) => {
     try {
         // Get Query Params & Check they're populated. Throw Bad Request.
@@ -54,35 +93,12 @@ const getJourneys = async (req, res) => {
             }
 
             //Summarise data to provide information in the format of end Route Card
-            const journeySummaries = []
-
-            for (const journey of journeys) {
-
-                let journeyArrayLength = journey.length - 1
-
-                if (journey[0].code === originSelection) {
-                    const from = journey[0].name
-                    const to = journey[journeyArrayLength].name
-                    const line = journey[0].line
-                    const stationBreakdown = journey.map(station => station.name)
-                    journeySummaries.push({
-                        from: from, to: to, line: line, stations: stationBreakdown
-                    })
-                } else {
-                    const from = journey[journeyArrayLength].name
-                    const to = journey[0].name
-                    const line = journey[journeyArrayLength].line
-                    const stationBreakdown = journey.map(station => station.name).reverse()
-                    journeySummaries.push({
-                        from: from, to: to, line: line, stations: stationBreakdown
-                    })
-                }
-            }
+            let journeySummaries = generateJourneySummaries(journeys, originSelection)
 
             // Provide response back to the request
             if (journeys.length > 0) {
                 res.status(200).json({
-                    message: "Successfully Retrieved Journeys.", data: journeys, summary: journeySummaries
+                    message: "Successfully Retrieved Journeys.", summary: journeySummaries
                 })
             } else {
                 res.status(204).json({message: "No Valid Journeys", data: []})
@@ -93,14 +109,4 @@ const getJourneys = async (req, res) => {
     }
 }
 
-const getStationInstances = async (stationCode) => {
-    const db = await dbConnection
-    return db.query('SELECT `id`, `code`, `name`, `timeToPrev`, `timeToNext`, `zone`, `line`, `position` FROM `stations` WHERE `code` = ?', [stationCode])
-}
-
-const getSingleLineJourney = async (line, start, end) => {
-    const db = await dbConnection
-    return db.query('SELECT `id`, `code`, `name`, `timeToPrev`, `timeToNext`, `zone`, `line`, `position` FROM `stations` WHERE `line` = ? AND `position` >= ? AND `position` <= ?', [line, start, end])
-}
-
-module.exports = {getAllStations, getJourneys, getStationInstances, getSingleLineJourney}
+module.exports = {getAllStations, getJourneys}
