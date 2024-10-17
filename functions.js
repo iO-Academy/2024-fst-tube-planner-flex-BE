@@ -28,11 +28,12 @@ const generateJourneySummaries = (journeys, originCode) => {
         let firstStation = journey[0]
         let lastStation = journey[journey.length - 1]
 
-        if (journey[0].code === originCode) {
+        if (firstStation.code === originCode) {
             const from = firstStation.name
             const to = lastStation.name
             const line = firstStation.line
-            const time = journey.map(station => station.timeToNext).reduce((accumulator, currentValue) => accumulator + currentValue)
+
+            const time = journey.reduce((accumulator , station) => accumulator + station.timeToNext,0)
             const stationBreakdown = journey.map(station => [station.name, station.timeToNext])
             summaries.push({
                 from: from, to: to, line: line, time: time, stations: stationBreakdown
@@ -41,7 +42,7 @@ const generateJourneySummaries = (journeys, originCode) => {
             const from = lastStation.name
             const to = firstStation.name
             const line = lastStation.line
-            const time = journey.map(station => station.timeToPrev).reduce((accumulator, currentValue) => accumulator + currentValue)
+            const time = journey.reduce((accumulator , station) => accumulator + station.timeToPrev,0)
             const stationBreakdown = journey.map(station => [station.name, station.timeToPrev]).reverse()
             summaries.push({
                 from: from, to: to, line: line, time: time, stations: stationBreakdown
@@ -51,18 +52,25 @@ const generateJourneySummaries = (journeys, originCode) => {
     return summaries
 }
 
+
 const getJourneys = async (req, res) => {
     try {
+
+        // Get Query Params & Check they're populated. Throw Bad Request.
         const {origin: originSelection, destination: destinationSelection} = req.query
         if (!originSelection || !destinationSelection) {
             res.status(400).json({message: "Origin and Destination are required."})
         } else {
+
+            // Unique Stations on Dropdown requires selection of all instances of Origins and Destinations...
             const origins = await getStationInstances(originSelection)
             const destinations = await getStationInstances(destinationSelection)
 
+            // Extract Lines to See if Single Line is Possible
             const originLines = origins.map(station => station.line)
             const destinationLines = destinations.map(station => station.line)
 
+            // Create Pairs of Origins and Destinations. Stations Exist across multiple Lines.
             const pairs = originLines.reduce((accumulator, line, originIndex) => {
                 const destinationIndex = destinationLines.indexOf(line)
                 if (destinationIndex !== -1) {
@@ -71,6 +79,7 @@ const getJourneys = async (req, res) => {
                 return accumulator
             }, [])
 
+            // Create Routes populated with Origin and Destination station Details
             let routes = pairs.map(([originIndex, destinationIndex]) => {
                 const originStation = origins[originIndex];
                 const destinationStation = destinations[destinationIndex];
@@ -82,14 +91,17 @@ const getJourneys = async (req, res) => {
                 }
             })
 
+            //Query Journey Data
             const journeys = []
             for (const route of routes) {
                 let journey = await getSingleLineJourney(route.line, route.start, route.end);
                 journeys.push(journey);
             }
 
+            //Summarise data to provide information in the format of end Route Card
             let journeySummaries = generateJourneySummaries(journeys, originSelection)
 
+            // Provide response back to the request
             if (journeys.length > 0) {
                 res.status(200).json({
                     message: "Successfully Retrieved Journeys.", summary: journeySummaries
