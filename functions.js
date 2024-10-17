@@ -10,6 +10,21 @@ const getAllStations = async (req, res) => {
     }
 }
 
+const calculateCosts = (originZone, destinationZone) => {
+
+    let cost = 3.99
+
+    if (originZone > destinationZone)
+    {
+        cost += (originZone - destinationZone) * 0.70
+    }
+    else if(originZone < destinationZone)
+    {
+        cost += (destinationZone - originZone) * 0.35
+    }
+    return cost
+}
+
 const getStationInstances = async (stationCode) => {
     const db = await dbConnection
     return db.query('SELECT `id`, `code`, `name`, `timeToPrev`, `timeToNext`, `zone`, `line`, `position` FROM `stations` WHERE `code` = ?', [stationCode])
@@ -33,22 +48,23 @@ const generateJourneySummaries = (journeys, originCode) => {
             const to = lastStation.name
             const line = firstStation.line
             const stationBreakdown = journey.map(station => station.name)
+            const cost = calculateCosts(firstStation.zone, lastStation.zone)
             summaries.push({
-                from: from, to: to, line: line, stations: stationBreakdown
+                from: from, to: to, line: line, cost: cost, stations: stationBreakdown
             })
         } else {
             const from = lastStation.name
             const to = firstStation.name
             const line = lastStation.line
+            const cost = calculateCosts(lastStation.zone, firstStation.zone)
             const stationBreakdown = journey.map(station => station.name).reverse()
             summaries.push({
-                from: from, to: to, line: line, stations: stationBreakdown
+                from: from, to: to, line: line, cost: cost, stations: stationBreakdown
             })
         }
     }
     return summaries
 }
-
 const getJourneys = async (req, res) => {
     try {
         // Get Query Params & Check they're populated. Throw Bad Request.
