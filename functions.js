@@ -43,35 +43,41 @@ const generateJourneySummaries = (journeys, originCode) => {
         let firstStation = journey[0]
         let lastStation = journey[journey.length - 1]
 
-        if (journey[0].code === originCode) {
+        if (firstStation.code === originCode) {
             const from = firstStation.name
             const to = lastStation.name
             const line = firstStation.line
-            const stationBreakdown = journey.map(station => station.name)
             const cost = calculateCosts(firstStation.zone, lastStation.zone)
+            const time = journey.reduce((accumulator , station) => accumulator + station.timeToNext,0) - lastStation.timeToNext
+            const stationBreakdown = journey.map(station => [station.name, station.timeToNext])
             summaries.push({
-                from: from, to: to, line: line, cost: cost, stations: stationBreakdown
+                from: from, to: to, line: line, time: time, cost: cost, stations: stationBreakdown
             })
         } else {
             const from = lastStation.name
             const to = firstStation.name
             const line = lastStation.line
             const cost = calculateCosts(lastStation.zone, firstStation.zone)
-            const stationBreakdown = journey.map(station => station.name).reverse()
+            const time = journey.reduce((accumulator , station) => accumulator + station.timeToPrev,0) - firstStation.timeToPrev
+
+            const stationBreakdown = journey.map(station => [station.name, station.timeToPrev]).reverse()
             summaries.push({
-                from: from, to: to, line: line, cost: cost, stations: stationBreakdown
+                from: from, to: to, line: line, time: time, cost: cost, stations: stationBreakdown
             })
         }
     }
     return summaries
 }
+
 const getJourneys = async (req, res) => {
     try {
+
         // Get Query Params & Check they're populated. Throw Bad Request.
         const {origin: originSelection, destination: destinationSelection} = req.query
         if (!originSelection || !destinationSelection) {
             res.status(400).json({message: "Origin and Destination are required."})
         } else {
+
             // Unique Stations on Dropdown requires selection of all instances of Origins and Destinations...
             const origins = await getStationInstances(originSelection)
             const destinations = await getStationInstances(destinationSelection)
