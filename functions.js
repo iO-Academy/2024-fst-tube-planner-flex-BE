@@ -22,7 +22,7 @@ const calculateCosts = (originZone, destinationZone) => {
     {
         cost += (destinationZone - originZone) * 0.35
     }
-    return cost
+    return cost.toFixed(2)
 }
 
 const getStationInstances = async (stationCode) => {
